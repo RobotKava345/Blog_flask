@@ -23,6 +23,14 @@ def get_all_categories():
     conn.close()
     return data
 
+def add_comment(article_id, email, content):
+    conn = sqlite3.connect('blog.db')
+    cursor = conn.cursor()
+    cursor.execute('''INSERT INTO comments (articles_id, email, content) 
+                      VALUES (?, ?, ?)''', (article_id, email, content))
+    conn.commit()
+    conn.close()
+
 def search_articles(search):
     conn = sqlite3.connect('blog.db')
     conn.row_factory = sqlite3.Row
@@ -53,6 +61,17 @@ def get_categories_articles(category_id):
     conn.close()
     return data
 
+def get_comments(article_id):
+    conn = sqlite3.connect('blog.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(''' 
+        SELECT * FROM comments WHERE articles_id=?''', [article_id])
+    data = cursor.fetchall()
+    conn.close()
+    return data
+
+
 
 @app.route("/") # Вказуємо url-адресу для виклику функції
 def index():
@@ -66,10 +85,20 @@ def index():
 
 
 
-@app.route("/article/<int:article_id>")
+@app.route("/article/<int:article_id>", methods = ['POST', 'GET'] )
 def article_page(article_id):
+
+    if request.method == 'POST':
+        email = request.form.get('email')
+        content = request.form.get('content')
+
+        if email and content:
+            add_comment(article_id, email, content)
+
     article = get_article(article_id)
-    return render_template("article_page.html", article=article)
+    categories = get_all_categories()
+    comments = get_comments(article_id)
+    return render_template("article_page.html", article=article, categories = categories, comments = comments)
 
 @app.route("/search")
 def search_page():
